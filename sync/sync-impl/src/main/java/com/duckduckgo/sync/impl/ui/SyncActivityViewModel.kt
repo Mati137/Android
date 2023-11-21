@@ -18,6 +18,7 @@ package com.duckduckgo.sync.impl.ui
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duckduckgo.anvil.annotations.ContributesViewModel
@@ -34,6 +35,7 @@ import com.duckduckgo.sync.impl.Result.Success
 import com.duckduckgo.sync.impl.SyncAccountRepository
 import com.duckduckgo.sync.impl.ui.SyncActivityViewModel.Command.AskDeleteAccount
 import com.duckduckgo.sync.impl.ui.SyncActivityViewModel.Command.AskEditDevice
+import com.duckduckgo.sync.impl.ui.SyncActivityViewModel.Command.AskPDFLocation
 import com.duckduckgo.sync.impl.ui.SyncActivityViewModel.Command.AskRemoveDevice
 import com.duckduckgo.sync.impl.ui.SyncActivityViewModel.Command.AskTurnOffSync
 import com.duckduckgo.sync.impl.ui.SyncActivityViewModel.Command.CheckIfUserHasStoragePermission
@@ -54,6 +56,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 
 @ContributesViewModel(ActivityScope::class)
 class SyncActivityViewModel @Inject constructor(
@@ -138,6 +141,7 @@ class SyncActivityViewModel @Inject constructor(
         object AskDeleteAccount : Command()
         object CheckIfUserHasStoragePermission : Command()
         data class RecoveryCodePDFSuccess(val recoveryCodePDFFile: File) : Command()
+        object AskPDFLocation : Command()
         data class AskRemoveDevice(val device: ConnectedDevice) : Command()
         data class AskEditDevice(val device: ConnectedDevice) : Command()
     }
@@ -225,6 +229,11 @@ class SyncActivityViewModel @Inject constructor(
         showAccountDetailsIfNeeded()
     }
 
+    fun onPdfLocationChosen(fileLocation: Uri) {
+        Timber.d("Sync: Pdf location chosen $fileLocation")
+
+    }
+
     fun onDeleteAccountClicked() {
         viewModelScope.launch {
             viewState.value = viewState.value.toggle(false)
@@ -260,8 +269,10 @@ class SyncActivityViewModel @Inject constructor(
     fun generateRecoveryCode(viewContext: Context) {
         viewModelScope.launch(dispatchers.io()) {
             val recoveryCodeB64 = syncAccountRepository.getRecoveryCode() ?: return@launch
-            val generateRecoveryCodePDF = recoveryCodePDF.generateAndStoreRecoveryCodePDF(viewContext, recoveryCodeB64)
-            command.send(RecoveryCodePDFSuccess(generateRecoveryCodePDF))
+            command.send(AskPDFLocation)
+
+            // val generateRecoveryCodePDF = recoveryCodePDF.generateAndStoreRecoveryCodePDF(viewContext, recoveryCodeB64)
+            // command.send(RecoveryCodePDFSuccess(generateRecoveryCodePDF))
         }
     }
 
